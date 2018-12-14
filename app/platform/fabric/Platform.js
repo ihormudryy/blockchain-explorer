@@ -19,7 +19,8 @@ const MetricService = require('../../persistence/fabric/MetricService');
 const fabric_const = require('./utils/FabricConst').fabric.const;
 const explorer_error = require('../../common/ExplorerMessage').explorer.error;
 
-const config_path = path.resolve(__dirname, './config.json');
+// const config_path = path.resolve(__dirname, './config.json');
+const config_path = path.resolve(__dirname, './fabric-ca-config.json');
 
 class Platform {
   constructor(persistence, broadcaster) {
@@ -27,18 +28,16 @@ class Platform {
     this.broadcaster = broadcaster;
     this.networks = new Map();
     this.proxy = new Proxy(this);
-    this.defaultNetwork;
-    this.defaultClient;
-    this.network_configs;
-    this.syncType;
+    this.defaultNetwork = null;
+    this.defaultClient = null;
+    this.network_configs = null;
+    this.syncType = null;
     this.explorerListeners = [];
   }
 
   async initialize() {
-    const _self = this;
-
     // loading the config.json
-    const all_config = JSON.parse(fs.readFileSync(config_path, 'utf8'));
+    const all_config = require(config_path);
     const network_configs = all_config[fabric_const.NETWORK_CONFIGS];
     this.syncType = all_config.syncType;
 
@@ -50,8 +49,8 @@ class Platform {
     await this.buildClients(network_configs);
 
     if (
-      this.networks.size == 0
-      && this.networks.get(this.defaultNetwork).size == 0
+      this.networks.size == 0 &&
+      this.networks.get(this.defaultNetwork).size == 0
     ) {
       logger.error(
         '************* There is no client found for Hyperledger fabric platform *************'
@@ -61,59 +60,52 @@ class Platform {
   }
 
   async buildClients(network_configs) {
-    const _self = this;
     let clientstatus = true;
-
-    // setting organization enrolment files
-    logger.debug('Setting admin organization enrolment files');
-    try {
-      this.network_configs = await FabricUtils.setAdminEnrolmentPath(
-        network_configs
-      );
-    } catch (e) {
-      logger.error(e);
-      clientstatus = false;
-      this.network_configs = network_configs;
-    }
+    //todo move from hardcoded
+    const client_name = 'client-1';
+    this.network_configs = network_configs;
 
     for (const network_name in this.network_configs) {
       this.networks.set(network_name, new Map());
-      const client_configs = this.network_configs[network_name];
+      const client_config = this.network_configs[network_name];
       if (!this.defaultNetwork) {
         this.defaultNetwork = network_name;
       }
 
+      /*****************************************
+       * is this actual comment?
+       * todo check with actual fabric-ca topology
       // Create fabric explorer client for each
       // Each client is connected to only a single peer and monitor that particular peer only
-      for (const client_name in client_configs.clients) {
+      // for (const client_name in client_configs.clients) {
         // set default client as first client
-        if (!this.defaultClient) {
-          this.defaultClient = client_name;
-        }
+        // if (!this.defaultClient) {
+        //   this.defaultClient = client_name;
+        // }
+         ******************************************/
+      // create client instance
+      logger.debug('Creatinging client [%s] >> ');
+      let client;
 
-        // create client instance
-        logger.debug('Creatinging client [%s] >> ', client_name);
-        let client;
-
-        if (clientstatus) {
-          client = await FabricUtils.createFabricClient(
-            client_configs,
-            client_name,
-            this.persistence
-          );
-        } else {
-          client = await FabricUtils.createDetachClient(
-            client_configs,
-            client_name,
-            this.persistence
-          );
-        }
-        if (client) {
-          // set client into clients map
-          const clients = this.networks.get(network_name);
-          clients.set(client_name, client);
-        }
+      if (clientstatus) {
+        client = await FabricUtils.createFabricClient(
+          client_config,
+          client_name,
+          this.persistence
+        );
+      } else {
+        client = await FabricUtils.createDetachClient(
+          client_config,
+          client_name,
+          this.persistence
+        );
       }
+      if (client) {
+        // set client into clients map
+        const clients = this.networks.get(network_name);
+        clients.set(client_name, client);
+      }
+      // }
     }
   }
 

@@ -31,7 +31,7 @@ class Explorer {
     );
     this.app.use(fileUpload());
     this.app.use(compression());
-    this.persistence;
+    this.persistence = null;
     this.platforms = [];
   }
 
@@ -55,7 +55,7 @@ class Explorer {
     );
 
     for (const pltfrm of explorerconfig[explorer_const.PLATFORMS]) {
-      const platform = await PlatformBuilder.build(
+      const platform = PlatformBuilder.build(
         pltfrm,
         this.persistence,
         broadcaster

@@ -28,14 +28,14 @@ class Broadcaster extends WebSocket.Server {
     super({ server });
     this.on('connection', function connection(ws, req) {
       const location = url.parse(req.url, true);
-      this.on('message', (message) => {
+      this.on('message', message => {
         console.log('received: %s', message);
       });
     });
   }
 
   broadcast(data) {
-    this.clients.forEach((client) => {
+    this.clients.forEach(client => {
       if (client.readyState === WebSocket.OPEN) {
         logger.debug('Broadcast >> %j', data);
         console.log('Broadcast >> %j', data);
@@ -70,7 +70,7 @@ async function startExplorer() {
 startExplorer();
 
 let connections = [];
-server.on('connection', (connection) => {
+server.on('connection', connection => {
   connections.push(connection);
   connection.on(
     'close',
@@ -80,7 +80,7 @@ server.on('connection', (connection) => {
 
 // this function is called when you want the server to die gracefully
 // i.e. wait for existing connections
-const shutDown = function () {
+const shutDown = function() {
   console.log('Received kill signal, shutting down gracefully');
   server.close(() => {
     explorer.close();
@@ -100,32 +100,22 @@ const shutDown = function () {
   setTimeout(() => connections.forEach(curr => curr.destroy()), 5000);
 };
 
-process.on('unhandledRejection', (up) => {
+const errorHandler = error => {
   console.log(
     '<<<<<<<<<<<<<<<<<<<<<<<<<< Explorer Error >>>>>>>>>>>>>>>>>>>>>'
   );
-  if (up instanceof ExplorerError) {
-    console.log('Error : ', up.message);
+  if (error instanceof ExplorerError) {
+    console.log('Error : ', error.message);
   } else {
-    console.log(up);
+    console.log(error);
   }
   setTimeout(() => {
     shutDown();
   }, 2000);
-});
-process.on('uncaughtException', (up) => {
-  console.log(
-    '<<<<<<<<<<<<<<<<<<<<<<<<<< Explorer Error >>>>>>>>>>>>>>>>>>>>>'
-  );
-  if (up instanceof ExplorerError) {
-    console.log('Error : ', up.message);
-  } else {
-    console.log(up);
-  }
-  setTimeout(() => {
-    shutDown();
-  }, 2000);
-});
+};
+
+process.on('unhandledRejection', errorHandler);
+process.on('uncaughtException', errorHandler);
 
 // listen for TERM signal .e.g. kill
 process.on('SIGTERM', shutDown);

@@ -1,0 +1,77 @@
+{
+  "network-configs": {
+    "HomeNetwork": {
+      "name": "Network",
+      "Version": "1.0",
+      "orderer": {
+        "name": "here",
+        "mspid": "hereMSP",
+        "url": "grpcs://localhost:7050",
+        "server-hostname": "orderer1-here",
+        "configuration": "../fabric_ca/fabric-ca/data/orgs/here/admin/fabric-ca-client-config.yaml",
+        "tls_cacerts": "../fabric_ca/fabric-ca/data/orgs/here/msp/tlscacerts/ica-here-7054.pem",
+        "root_cert": "../fabric_ca/fabric-ca/data/here-ca-cert.pem",
+        "ca": {
+          "url": "https://localhost:7057",
+          "name": "ica-here"
+        },
+        "admin": {
+          "username": "ica-here-admin",
+          "secret": "ica-here-adminpw"
+        }
+      },
+      "consumer": {
+        "name": "consumer",
+        "mspid": "consumerMSP",
+        "root_cert": "../fabric_ca/fabric-ca/data/consumer-ca-cert.pem",
+        "configuration": "../fabric_ca/fabric-ca/data/orgs/consumer/admin/fabric-ca-client-config.yaml",
+        "ca": {
+          "url": "https://localhost:7058",
+          "name": "ica-consumer"
+        },
+        "peers": {
+          "peer1": {
+            "requests": "grpcs://localhost:7051",
+            "server-hostname": "peer1-consumer",
+            "tls_cacerts": "../fabric_ca/fabric-ca/data/orgs/consumer/msp/tlscacerts/ica-consumer-7054.pem"
+          },
+          "peer2": {
+            "requests": "grpcs://localhost:8051",
+            "server-hostname": "peer2-consumer",
+            "tls_cacerts": "../fabric_ca/fabric-ca/data/orgs/consumer/msp/tlscacerts/ica-consumer-7054.pem"
+          }
+        },
+        "admin": {
+          "username": "ica-consumer-admin",
+          "secret": "ica-consumer-adminpw"
+        }
+      },
+      "provider": {
+        "name": "provider",
+        "mspid": "providerMSP",
+        "root_cert": "../fabric_ca/fabric-ca/data/provider-ca-cert.pem",
+        "configuration": "../fabric_ca/fabric-ca/data/orgs/provider/admin/fabric-ca-provider-config.yaml",
+        "ca": {
+          "url": "https://localhost:7059",
+          "name": "ica-provider"
+        },
+        "peers": {
+          "peer1": {
+            "requests": "grpcs://localhost:9051",
+            "server-hostname": "peer1-provider",
+            "tls_cacerts": "../fabric_ca/fabric-ca/data/orgs/provider/msp/tlscacerts/ica-provider-7054.pem"
+          },
+          "peer2": {
+            "requests": "grpcs://localhost:10051",
+            "server-hostname": "peer2-provider",
+            "tls_cacerts": "../fabric_ca/fabric-ca/data/orgs/provider/msp/tlscacerts/ica-provider-7054.pem"
+          }
+        },
+        "admin": {
+          "username": "ica-provider-admin",
+          "secret": "ica-provider-adminpw"
+        }
+      }
+    }
+  }
+}

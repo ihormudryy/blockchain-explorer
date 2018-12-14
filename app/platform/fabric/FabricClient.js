@@ -3,6 +3,9 @@
 */
 
 const Fabric_Client = require('fabric-client');
+const Fabric_CA_Client = require('fabric-ca-client');
+const path = require('path');
+const fs = require('fs');
 const helper = require('../../common/helper');
 
 const logger = helper.getLogger('FabricClient');
@@ -23,16 +26,18 @@ const Constants = require('fabric-client/lib/Constants.js');
 const ROLES = Constants.NetworkConfig.ROLES;
 
 const explorer_mess = require('../../common/ExplorerMessage').explorer;
+const config_path = path.resolve(__dirname, './fabric-ca-config.json');
 
 class FabricClient {
-  constructor(client_name) {
+  constructor(config, client_name) {
     this.client_name = client_name;
-    this.hfc_client = new Fabric_Client();
+    this.hfc_client = null;
+    // this.hfc_client = new Fabric_Client();
     this.defaultPeer = {};
     this.defaultChannel = {};
     this.defaultOrderer = null;
     this.channelsGenHash = new Map();
-    this.client_config;
+    this.client_config = null;
     this.adminpeers = new Map();
     this.adminusers = new Map();
     this.peerroles = {};
@@ -42,69 +47,142 @@ class FabricClient {
     }
   }
 
-  async initialize(client_config, persistence) {
-    this.client_config = client_config;
+  async initialize(config, persistence) {
+    this.hfc_client = await this.createClient(config);
+
+    this.client_config = config;
 
     // Loading client from network configuration file
     logger.debug(
       'Loading client  [%s] from configuration ...',
       this.client_name
     );
-    await this.LoadClientFromConfig(client_config);
-    logger.debug(
-      'Successfully loaded client [%s] from configuration',
-      this.client_name
-    );
 
     // getting channels from queryChannels
-    let channels;
+    // let channels;
+    // try {
+    //   channels = await this.hfc_client.queryChannels(
+    //     this.defaultPeer.getName(),
+    //     true
+    //   );
+    // } catch (e) {
+    //   logger.error(e);
+    // }
+    const channel = this.hfc_client.newChannel('mychannel');
+    this.defaultChannel = channel;
+    const temp_orderers = await channel.getOrderers();
+    if(!temp_orderers.length > 0){
+      // newOrderer = this.hfc_client.newOrderer(config.orderer.url);
+      var order = this.hfc_client.newOrderer(config.orderer.url, { pem: config.orderer.tls_cacerts , 'ssl-target-name-override': null})
+      channel.addOrderer(order);
+      this.defaultOrderer = order;
+    }
+
+
+    // if (!channels) {
+    //   this.status = true;
+    //   logger.debug('Client channels >> %j', channels.channels);
+    //
+    //
+    //
+    //   // initialize channel network information from Discover
+    //   for (const channel of channels.channels) {
+    //     await this.initializeNewChannel(channel.channel_id);
+    //     logger.debug('Initialized channel >> %s', channel.channel_id);
+    //   }
+    //
+    //   try {
+    //     // load default channel network details from discovery
+    //     const result = await this.defaultChannel.getDiscoveryResults();
+    //   } catch (e) {
+    //     logger.debug('Channel Discovery >>  %s', e);
+    //     throw new ExplorerError(
+    //       explorer_mess.error.ERROR_2001,
+    //       this.defaultChannel.getName(),
+    //       this.client_name
+    //     );
+    //   }
+    //   // setting default orderer
+    //   const channel_name = config.client.channel;
+    //   const channel = await this.hfc_client.getChannel(channel_name);
+    //   const temp_orderers = await channel.getOrderers();
+    //   if (temp_orderers && temp_orderers.length > 0) {
+    //     this.defaultOrderer = temp_orderers[0];
+    //   } else {
+    //     throw new ExplorerError(explorer_mess.error.ERROR_2002);
+    //   }
+    //   logger.debug(
+    //     'Set client [%s] default orderer as  >> %s',
+    //     this.client_name,
+    //     this.defaultOrderer.getName()
+    //   );
+    // } else if (persistence) {
+    //   this.initializeDetachClient(config, persistence);
+    // }
+  }
+
+  async createClient(config) {
+    const {
+      admin: { username, secret },
+      ca: { url, name },
+      mspid,
+      root_cert
+    } = config.orderer;
+    const store_path = path.join(__dirname, 'tmp');
+    const fabric_client = new Fabric_Client();
     try {
-      channels = await this.hfc_client.queryChannels(
-        this.defaultPeer.getName(),
+      const crypto_suite = await this.setCryptoSuite(fabric_client, store_path);
+      const pem_file = fs.readFileSync(root_cert, 'utf-8');
+      const tlsOptions = {
+        trustedRoots: [pem_file],
+        verify: false
+      };
+
+      const user_from_store = await fabric_client.getUserContext(
+        username,
         true
       );
-    } catch (e) {
-      logger.error(e);
-    }
-
-    if (channels) {
-      this.status = true;
-      logger.debug('Client channels >> %j', channels.channels);
-
-      // initialize channel network information from Discover
-      for (const channel of channels.channels) {
-        await this.initializeNewChannel(channel.channel_id);
-        logger.debug('Initialized channel >> %s', channel.channel_id);
+      if (user_from_store && user_from_store.isEnrolled()) {
+        await fabric_client.setUserContext(user_from_store);
+        return fabric_client;
       }
 
-      try {
-        // load default channel network details from discovery
-        const result = await this.defaultChannel.getDiscoveryResults();
-      } catch (e) {
-        logger.debug('Channel Discovery >>  %s', e);
-        throw new ExplorerError(
-          explorer_mess.error.ERROR_2001,
-          this.defaultChannel.getName(),
-          this.client_name
-        );
-      }
-      // setting default orderer
-      const channel_name = client_config.client.channel;
-      const channel = await this.hfc_client.getChannel(channel_name);
-      const temp_orderers = await channel.getOrderers();
-      if (temp_orderers && temp_orderers.length > 0) {
-        this.defaultOrderer = temp_orderers[0];
-      } else {
-        throw new ExplorerError(explorer_mess.error.ERROR_2002);
-      }
-      logger.debug(
-        'Set client [%s] default orderer as  >> %s',
-        this.client_name,
-        this.defaultOrderer.getName()
+      const fabric_ca_client = new Fabric_CA_Client(
+        url,
+        tlsOptions,
+        name,
+        crypto_suite
       );
-    } else if (persistence) {
-      this.initializeDetachClient(client_config, persistence);
+      const enrollment = await fabric_ca_client.enroll({
+        enrollmentID: username,
+        enrollmentSecret: secret
+      });
+      const user = await fabric_client.createUser({
+        username: username,
+        mspid: mspid,
+        cryptoContent: {
+          privateKeyPEM: enrollment.key.toBytes(),
+          signedCertPEM: enrollment.certificate
+        }
+      });
+      await fabric_client.setUserContext(user);
+      return fabric_client;
+    } catch (e) {
+      console.log(e);
+      throw new ExplorerError(explorer_mess.ERROR_2008);
     }
+  }
+
+  async setCryptoSuite(fabric_client, store_path) {
+    const state_store = await Fabric_Client.newDefaultKeyValueStore({
+      path: store_path
+    });
+    fabric_client.setStateStore(state_store);
+    const crypto_suite = Fabric_Client.newCryptoSuite();
+    const crypto_store = Fabric_Client.newCryptoKeyStore({ path: store_path });
+    crypto_suite.setCryptoKeyStore(crypto_store);
+    fabric_client.setCryptoSuite(crypto_suite);
+    return crypto_suite;
   }
 
   async initializeDetachClient(client_config, persistence) {
@@ -209,75 +287,13 @@ class FabricClient {
     }
   }
 
-  async LoadClientFromConfig(client_config) {
-    const _self = this;
-    // load client through hfc client network configuration class
-    await this.hfc_client.loadFromConfig(client_config);
-    // initialize credential stores
-    await this.hfc_client.initCredentialStores();
-    logger.debug(
-      'Successfully initialized credential stores for client [%s]',
-      this.client_name
-    );
-
-    // Creating Admin User
-    const organization = await this.hfc_client._network_config.getOrganization(
-      client_config.client.organization,
-      true
-    );
-    if (organization) {
-      const mspid = organization.getMspid();
-      const admin_key = organization.getAdminPrivateKey();
-      const admin_cert = organization.getAdminCert();
-      const username = `${this.client_name}_${mspid}Admin`;
-      const user = await this.hfc_client.createUser({
-        username,
-        mspid,
-        cryptoContent: {
-          privateKeyPEM: admin_key,
-          signedCertPEM: admin_cert
-        },
-        skipPersistence: false
-      });
-      logger.debug(
-        'Successfully created admin user [%s] for client [%s]',
-        username,
-        this.client_name
-      );
-      this.adminusers.set(username, user);
-    }
-
-    // Loading default Peer and channel
-    const channel_name = client_config.client.channel;
-    const peer_name = Object.keys(
-      client_config.channels[channel_name].peers
-    )[0];
-    this.defaultChannel = this.hfc_client.getChannel(channel_name);
-    logger.debug(
-      'Set client [%s] default channel as  >> %s',
-      this.client_name,
-      this.defaultChannel.getName()
-    );
-
-    if (this.defaultChannel.getPeers().length > 0) {
-      this.defaultPeer = this.defaultChannel.getPeer(peer_name);
-    } else {
-      throw new ExplorerError(explorer_mess.error.ERROR_2006, this.client_name);
-    }
-    logger.debug(
-      'Set client [%s] default peer as  >> %s',
-      this.client_name,
-      this.defaultPeer.getName()
-    );
-  }
-
   async initializeNewChannel(channel_name) {
     // If the new channel is not defined in configuration, then use default channel configuration as new channel configuration
-    if (!this.client_config.channels[channel_name]) {
-      this.hfc_client._network_config._network_config.channels[
-        channel_name
-      ] = this.client_config.channels[this.defaultChannel.getName()];
-    }
+    // if (!this.client_config.channels[channel_name]) {
+    //   this.hfc_client._network_config._network_config.channels[
+    //     channel_name
+    //   ] = this.client_config.channels[this.defaultChannel.getName()];
+    // }
     // get channel, if the channel is not exist in the hfc client context,
     // then it will create new channel from the netwrok configuration
     const channel = this.hfc_client.getChannel(channel_name);
