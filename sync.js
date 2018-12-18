@@ -45,7 +45,7 @@ const shutDown = function() {
 
 const errorHandler = error => {
   console.log(
-    '<<<<<<<<<<<<<<<<<<<<<<<<<< Explorer Error >>>>>>>>>>>>>>>>>>>>>'
+    '<<<<<<<<<<<<<<<<<<<<<<<<<< Synchronizer Error >>>>>>>>>>>>>>>>>>>>>'
   );
   if (error instanceof ExplorerError) {
     console.log('Error : ', error.message);

@@ -263,8 +263,20 @@ class CRUDService {
 
   async getChannelsInfo(peerid) {
     const channels = await this.sql
-      .getRowsBySQlNoCondtion(` select c.id as id,c.name as channelName,c.blocks as blocks ,c.channel_genesis_hash as channel_genesis_hash,c.trans as transactions,c.createdt as createdat,c.channel_hash as channel_hash from channel c,
-        peer_ref_channel pc where c.channel_genesis_hash = pc.channelid and pc.peerid='${peerid}' group by c.id ,c.name ,c.blocks  ,c.trans ,c.createdt ,c.channel_hash,c.channel_genesis_hash order by c.name `);
+      .getRowsBySQlNoCondtion(`
+select c.id                   as id,
+       c.name                 as channelName,
+       c.blocks               as blocks,
+       c.channel_genesis_hash as channel_genesis_hash,
+       c.trans                as transactions,
+       c.createdt             as createdat,
+       c.channel_hash         as channel_hash
+from channel c,
+     peer_ref_channel pc
+where c.channel_genesis_hash = pc.channelid
+  and pc.peerid = '${peerid}'
+group by c.id, c.name, c.blocks, c.trans, c.createdt, c.channel_hash, c.channel_genesis_hash
+order by c.name`);
 
     return channels;
   }
