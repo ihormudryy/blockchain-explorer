@@ -104,6 +104,10 @@ class Platform {
         // set client into clients map
         const clients = this.networks.get(network_name);
         clients.set(client_name, client);
+        this.setDefaultClient(client_name);
+        // const default_peer_name = Object.keys(
+        //   client_config.channels[default_channel_name].peers
+        // )[0];
       }
       // }
     }
@@ -163,6 +167,11 @@ class Platform {
     return this.networks;
   }
 
+  /**
+   * @param network_name {String}
+   * @param client_name {String}
+   * @returns {FabricClient}
+   */
   getClient(network_name, client_name) {
     return this.networks
       .get(network_name || this.defaultNetwork)
@@ -177,6 +186,9 @@ class Platform {
     return this.broadcaster;
   }
 
+  /**
+   * @returns {Proxy}
+   */
   getProxy() {
     return this.proxy;
   }

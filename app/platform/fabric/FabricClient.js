@@ -69,15 +69,33 @@ class FabricClient {
     //   logger.error(e);
     // }
     const channel = this.hfc_client.newChannel('mychannel');
+    this.status = true;
     this.defaultChannel = channel;
     const temp_orderers = await channel.getOrderers();
-    if(!temp_orderers.length > 0){
+    if (!temp_orderers.length > 0) {
       // newOrderer = this.hfc_client.newOrderer(config.orderer.url);
-      var order = this.hfc_client.newOrderer(config.orderer.url, { pem: config.orderer.tls_cacerts , 'ssl-target-name-override': null})
+      var order = this.hfc_client.newOrderer(config.orderer.url, {
+        pem: config.orderer.tls_cacerts,
+        'ssl-target-name-override': null
+      });
       channel.addOrderer(order);
       this.defaultOrderer = order;
     }
+    const orgs = config.organizations;
+    const defaultOrg = orgs[Object.keys(orgs)[0]];
+    const peers = defaultOrg.peers;
+    const defaultPeer = peers[Object.keys(peers)[0]];
 
+    // this.defaultPeer
+    const newData = fs.readFileSync(defaultPeer.tls_cacerts);
+    const peer = this.hfc_client.newPeer(defaultPeer.requests, {
+      pem: Buffer.from(newData).toString(),
+      'ssl-target-name-override': defaultPeer['server-hostname']
+    });
+    this.setDefaultPeer(peer);
+    // channel.addPeer(peer, defaultOrg.mspid);
+    channel.addPeer(peer);
+    await channel.initialize();
 
     // if (!channels) {
     //   this.status = true;

@@ -19,8 +19,10 @@ const MetricService = require('../../../persistence/fabric/MetricService');
 
 const fabric_const = require('../utils/FabricConst').fabric.const;
 const explorer_mess = require('../../../common/ExplorerMessage').explorer;
+const explorer_config = require('../../../explorerconfig.json');
 
-const config_path = path.resolve(__dirname, '../config.json');
+// const config_path = path.resolve(__dirname, '../config.json');
+const config_path = path.resolve(__dirname, '../fabric-ca-config.json');
 
 class SyncPlatform {
   constructor(persistence, sender) {
@@ -48,16 +50,16 @@ class SyncPlatform {
     }, 60000);
 
     // loading the config.json
-    const all_config = JSON.parse(fs.readFileSync(config_path, 'utf8'));
+    const all_config = require(config_path);
     const network_configs = all_config[fabric_const.NETWORK_CONFIGS];
 
-    if (args.length == 0) {
+    if (args.length === 0) {
       // get the first network and first client
       this.network_name = Object.keys(network_configs)[0];
       this.client_name = Object.keys(
         network_configs[Object.keys(network_configs)[0]].clients
       )[0];
-    } else if (args.length == 1) {
+    } else if (args.length === 1) {
       // get the first client with respect to the passed network name
       this.network_name = args[0];
       this.client_name = Object.keys(
@@ -75,7 +77,7 @@ class SyncPlatform {
     );
 
     // setting the block synch interval time
-    await this.setBlocksSyncTime(all_config);
+    await this.setBlocksSyncTime(explorer_config.sync.blocksSyncTime);
 
     logger.debug('Blocks synch interval time >> %s', this.blocksSyncTime);
     // update the discovery-cache-life as block synch interval time in global config
@@ -93,11 +95,11 @@ class SyncPlatform {
     if (!this.client) {
       throw new ExplorerError(explorer_mess.error.ERROR_2011);
     }
+    const orgs = this.client_configs.organizations;
+    const defaultOrg = orgs[Object.keys(orgs)[0]];
     const peer = {
       requests: this.client.getDefaultPeer().getUrl(),
-      mspid: this.client_configs.organizations[
-        this.client_configs.clients[this.client_name].organization
-      ].mspid
+      mspid: defaultOrg.mspid
     };
 
     const peerStatus = await this.client.getPeerStatus(peer);

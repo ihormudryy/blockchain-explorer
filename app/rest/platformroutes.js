@@ -6,6 +6,12 @@
 const requtil = require('./requestutils');
 const helper = require('../common/helper');
 
+/**
+ *
+ * @param app
+ * @param platform {Platform}
+ * @returns {Promise<void>}
+ */
 const platformroutes = async function(app, platform) {
   const proxy = platform.getProxy();
   const statusMetrics = platform.getPersistence().getMetricService();

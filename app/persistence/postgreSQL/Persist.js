@@ -22,6 +22,9 @@ class Persist {
     return this.metricservice;
   }
 
+  /**
+   * @returns {CRUDService}
+   */
   getCrudService() {
     return this.crudService;
   }

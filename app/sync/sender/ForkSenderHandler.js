@@ -5,8 +5,8 @@
 class ForkSenderHandler {
   constructor() {}
 
-  async initialize() {
-    process.on('message', (msg) => {
+  initialize() {
+    process.on('message', msg => {
       logger.debug('Message from parent: %j', msg);
     });
   }

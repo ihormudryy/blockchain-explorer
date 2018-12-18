@@ -12,6 +12,13 @@ const ExplorerError = require('../../../common/ExplorerError');
 const explorer_error = require('../../../common/ExplorerMessage').explorer
   .error;
 
+/**
+ *
+ * @param config
+ * @param client_name
+ * @param persistence
+ * @returns {Promise<FabricClient>}
+ */
 async function createFabricClient(config, client_name, persistence) {
   logger.debug('Validating client [%s] configuration', client_name);
   // const validation = validateClientConfig(client_config);

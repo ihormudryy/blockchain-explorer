@@ -10,7 +10,7 @@ class ExplorerSender {
     this.syncSenderHandler;
   }
 
-  async initialize() {
+  initialize() {
     if (this.syncType && this.syncType === explorer_const.SYNC_TYPE_LOCAL) {
       const ForkSenderHandler = require('./ForkSenderHandler');
       this.syncSenderHandler = new ForkSenderHandler();

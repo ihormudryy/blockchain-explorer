@@ -13,6 +13,9 @@ const fabric_const = require('./utils/FabricConst').fabric.const;
 const explorer_error = require('../../common/ExplorerMessage').explorer.error;
 
 class Proxy {
+  /**
+   * @param platform {Platform}
+   */
   constructor(platform) {
     this.platform = platform;
     this.persistence = platform.getPersistence();

@@ -22,7 +22,7 @@ start();
 
 // this function is called when you want the server to die gracefully
 // i.e. wait for existing connections
-const shutDown = function () {
+const shutDown = function() {
   console.log(
     '<<<<<<<<<<<<<<<<<<<<<<<<<< Closing client processor >>>>>>>>>>>>>>>>>>>>>'
   );
@@ -43,28 +43,22 @@ const shutDown = function () {
   }, 2000);
 };
 
-process.on('unhandledRejection', (up) => {
+const errorHandler = error => {
   console.log(
-    '<<<<<<<<<<<<<<<<<<<<<<<<<< Synchronizer Error >>>>>>>>>>>>>>>>>>>>>'
+    '<<<<<<<<<<<<<<<<<<<<<<<<<< Explorer Error >>>>>>>>>>>>>>>>>>>>>'
   );
-  if (up instanceof ExplorerError) {
-    console.log('Error : ', up.message);
+  if (error instanceof ExplorerError) {
+    console.log('Error : ', error.message);
   } else {
-    console.log(up);
+    console.log(error);
   }
-  shutDown();
-});
-process.on('uncaughtException', (up) => {
-  console.log(
-    '<<<<<<<<<<<<<<<<<<<<<<<<<< Synchronizer Error >>>>>>>>>>>>>>>>>>>>>'
-  );
-  if (up instanceof ExplorerError) {
-    console.log('Error : ', up.message);
-  } else {
-    console.log(up);
-  }
-  shutDown();
-});
+  setTimeout(() => {
+    shutDown();
+  }, 2000);
+};
+
+process.on('unhandledRejection', errorHandler);
+process.on('uncaughtException', errorHandler);
 
 // listen for TERM signal .e.g. kill
 process.on('SIGTERM', shutDown);
