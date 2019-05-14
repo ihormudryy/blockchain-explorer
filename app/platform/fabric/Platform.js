@@ -4,7 +4,6 @@
 
 const path = require('path');
 const fs = require('fs-extra');
-const axios = require('axios');
 
 const Proxy = require('./Proxy');
 const helper = require('../../common/helper');
@@ -16,6 +15,8 @@ const ExplorerListener = require('../../sync/listener/ExplorerListener');
 
 const CRUDService = require('../../persistence/fabric/CRUDService');
 const MetricService = require('../../persistence/fabric/MetricService');
+
+const { createChannel, getChannel } = require('./service/cliWrapperService');
 
 const fabric_const = require('./utils/FabricConst').fabric.const;
 const explorer_error = require('../../common/ExplorerMessage').explorer.error;
@@ -51,16 +52,24 @@ class Platform {
     for (let channel of channels) {
       const rn = channel.replace('channel', '');
       try {
-        console.log('test channel ', rn);
-        const resp = await axios.get(
-          `http://setup:3000/channel?orderer=blockchain-technology&peerOrgs=governor&randomNumber=${rn}`
-        );
+        const peerOrgs = Object.keys(
+          Object.values(network_configs)[0].clients
+        )[0];
+        const orderer = Object.values(
+          Object.values(network_configs)[0].orderers
+        )[0].organization;
+        console.log('test channel ', rn, peerOrgs, orderer);
+        const resp = await getChannel({
+          peerOrgs,
+          orderer,
+          randomNumber: rn
+        });
         console.log('test channel get', resp.data);
         if (resp.data && !resp.data.success) {
           console.log('creating channel', rn);
-          await axios.post('http://setup:3000/channel', {
-            orderer: 'blockchain-technology',
-            peerOrgs: 'governor',
+          await createChannel({
+            orderer,
+            peerOrgs,
             randomNumber: rn,
             autojoin: true
           });
@@ -269,4 +278,5 @@ class Platform {
     }
   }
 }
+
 module.exports = Platform;
