@@ -1,6 +1,6 @@
 {
   "persistence": "postgreSQL",
-  "platforms": ["fabric"],
+  "platform": "fabric",
   "postgreSQL": {
     "host": "blockchain-explorer-db",
     "port": "5432",

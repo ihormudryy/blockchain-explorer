@@ -5,7 +5,7 @@
 exports.explorer = {
   const: {
     PERSISTENCE: 'persistence',
-    PLATFORMS: 'platforms',
+    PLATFORM: 'platform',
     PLATFORM_FABRIC: 'fabric',
     PERSISTENCE_POSTGRESQL: 'postgreSQL',
     SYNC_TYPE_LOCAL: 'local',

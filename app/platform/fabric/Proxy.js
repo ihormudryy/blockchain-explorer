@@ -191,8 +191,8 @@ class Proxy {
   }
 
   getClientStatus() {
-    const client = this.platform.getClient();
-    return client.getStatus();
+    //const client = this.platform.defaultClient;
+    return this.platform.defaultClient;
   }
 
   async getChannels() {

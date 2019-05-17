@@ -43,7 +43,9 @@
     "react-router": "^4.3.1",
     "stomp-broker-js": "^0.1.3",
     "stompjs": "^2.3.3",
-    "swagger-ui-express": "^3.0.9",
+    "swagger": "^0.7.5",
+    "swagger-express-mw": "^0.7.0",
+    "swagger-ui-express": "^4.0.3",
     "utf8-bytes": "0.0.1",
     "winston": "^2.2.0",
     "ws": "^5.1.1"

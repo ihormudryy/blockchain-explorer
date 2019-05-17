@@ -4,8 +4,10 @@
 const express = require('express');
 const fileUpload = require('express-fileupload');
 const bodyParser = require('body-parser');
-const swaggerUi = require('swagger-ui-express');
 const compression = require('compression');
+const SwaggerExpress = require('swagger-express-mw');
+const SwaggerUi = require('swagger-tools/middleware/swagger-ui');
+
 const PlatformBuilder = require('./platform/PlatformBuilder');
 const explorerconfig = require('./explorerconfig.json');
 const PersistenceFactory = require('./persistence/PersistenceFactory');
@@ -24,19 +26,56 @@ class Explorer {
     this.app = express();
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
-    this.app.use(
-      '/api-docs',
-      swaggerUi.serve,
-      swaggerUi.setup(swaggerDocument)
-    );
+    // this.app.use(
+    //   '/api-docs',
+    //   swaggerUi.serve,
+    //   swaggerUi.setup(swaggerDocument)
+    // );
     this.app.use(fileUpload());
     this.app.use(compression());
     this.persistence;
-    this.platforms = [];
+    this.platform = {};
   }
 
   getApp() {
     return this.app;
+  }
+
+  async initAPI(platform) {
+    return new Promise((resolve, reject) => {
+      const config = {
+        appRoot: __dirname,
+        swaggerFile: 'app/swagger.json',
+        dependencies: platform,
+        controllersDirs: ['rest']
+      };
+
+      SwaggerExpress.create(config, (err, swaggerExpress) => {
+        if (err) {
+          throw err;
+        }
+
+        // install middleware
+        this.app.use(SwaggerUi(swaggerExpress.runner.swagger));
+
+        swaggerExpress.register(this.app);
+
+        this.app.use((err, req, res, next) => {
+          if (typeof err !== 'object') {
+            err = {
+              message: String(err) // Coerce to string
+            };
+          } else {
+            Object.defineProperty(err, 'message', { enumerable: true });
+          }
+
+          res.setHeader('Content-Type', 'application/json');
+          console.log('error', err);
+          res.end(JSON.stringify(err));
+        });
+        resolve();
+      });
+    });
   }
 
   async initialize(broadcaster) {
@@ -54,36 +93,33 @@ class Explorer {
       explorerconfig[explorerconfig[explorer_const.PERSISTENCE]]
     );
 
-    for (const pltfrm of explorerconfig[explorer_const.PLATFORMS]) {
-      const platform = await PlatformBuilder.build(
-        pltfrm,
-        this.persistence,
-        broadcaster
-      );
+    const platform = await PlatformBuilder.build(
+      explorerconfig[explorer_const.PLATFORM],
+      this.persistence,
+      broadcaster
+    );
 
-      platform.setPersistenceService();
-      // // initializing the platfrom
-      await platform.initialize();
+    platform.setPersistenceService();
+    // // initializing the platfrom
+    await platform.initialize();
+    //TODO: after platform has initialized use platform abject as dependency in swagger config
+    await this.initAPI(platform);
+    // initializing the rest app services
+    await dbroutes(this.app, platform);
+    await platformroutes(this.app, platform);
 
-      // initializing the rest app services
-      await dbroutes(this.app, platform);
-      await platformroutes(this.app, platform);
+    // initializing sync listener
+    platform.initializeListener(explorerconfig.sync);
 
-      // initializing sync listener
-      platform.initializeListener(explorerconfig.sync);
-
-      this.platforms.push(platform);
-    }
+    this.platform = platform;
   }
 
   close() {
     if (this.persistence) {
       this.persistence.closeconnection();
     }
-    for (const platform of this.platforms) {
-      if (platform) {
-        platform.destroy();
-      }
+    if (this.platform) {
+      this.platform.destroy();
     }
   }
 }
