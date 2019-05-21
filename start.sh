@@ -23,7 +23,7 @@ echo "**************************************************************************
 
 if [ $NODE_ENV = "development" ]; then
   echo "*********************************** $NODE_ENV ************************************"
-  ./node_modules/.bin/nodemon main.js --ignore ./tmp/ >> $LOG_CONSOLE_PATH
+  ./node_modules/.bin/nodemon --inspect-brk=0.0.0.0 main.js --ignore ./tmp/ >> $LOG_CONSOLE_PATH
 else
   node main.js --watch >> $LOG_CONSOLE_PATH
 fi

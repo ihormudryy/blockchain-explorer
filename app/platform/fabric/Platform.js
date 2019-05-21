@@ -28,7 +28,7 @@ class Platform {
   constructor(persistence, broadcaster) {
     this.persistence = persistence;
     this.broadcaster = broadcaster;
-    this.networks = new Map();
+    this.networks = {};
     this.proxy = new Proxy(this);
     this.defaultNetwork;
     this.defaultClient;
@@ -87,8 +87,8 @@ class Platform {
     await this.buildClients(network_configs);
 
     if (
-      this.networks.size == 0 &&
-      this.networks.get(this.defaultNetwork).size == 0
+      !this.networks.defaultNetwork &&
+      this.networks[this.defaultNetwork].size === 0
     ) {
       logger.error(
         '************* There is no client found for Hyperledger fabric platform *************'
@@ -107,8 +107,8 @@ class Platform {
       this.persistence
     );
 
-    const clients = this.networks.get(this.defaultNetwork);
-    clients.set(name, client);
+    const clients = this.networks[this.defaultNetwork];
+    clients[name] = client; // .set(name, client);
 
     this.defaultClient = name;
     let explorerListener = this.explorerListeners.find(
@@ -150,7 +150,8 @@ class Platform {
     }
 
     for (const network_name in this.network_configs) {
-      this.networks.set(network_name, new Map());
+      console.log('set network', network_name);
+      this.networks[network_name] = {}; // .set(network_name, new Map());
       const client_configs = this.network_configs[network_name];
       if (!this.defaultNetwork) {
         this.defaultNetwork = network_name;
@@ -183,16 +184,17 @@ class Platform {
         }
         if (client) {
           // set client into clients map
-          const clients = this.networks.get(network_name);
-          clients.set(client_name, client);
+          const clients = this.networks[network_name];
+          clients[client_name] = client;
+          // clients.set(client_name, client);
         }
       }
     }
   }
 
   initializeListener(syncconfig) {
-    for (const [network_name, clients] of this.networks.entries()) {
-      for (const [client_name, client] of clients.entries()) {
+    for (const [network_name, clients] of Object.entries(this.networks)) {
+      for (const [client_name, client] of Object.entries(clients)) {
         if (this.getClient(network_name, client_name).getStatus()) {
           const explorerListener = new ExplorerListener(this, syncconfig);
           explorerListener.initialize([network_name, client_name, '1']);
@@ -217,12 +219,12 @@ class Platform {
   }
 
   changeNetwork(network_name, client_name, channel_name) {
-    const network = this.networks.get(network_name);
+    const network = this.networks[network_name];
     if (network) {
       this.defaultNetwork = network_name;
       let client;
       if (client_name) {
-        client = network.get(client_name);
+        client = network[client_name];
         if (client) {
           this.defaultClient = client_name;
         } else {
@@ -248,9 +250,14 @@ class Platform {
   }
 
   getClient(network_name, client_name) {
-    return this.networks
-      .get(network_name || this.defaultNetwork)
-      .get(client_name || this.defaultClient);
+    // console.log(this.networks, this.defaultNetwork, this.defaultClient);
+    return this.networks[network_name || this.defaultNetwork][
+      client_name || this.defaultClient
+    ];
+    // .get(client_name || this.defaultClient);
+    // return this.networks
+    //   .get(network_name || this.defaultNetwork)
+    //   .get(client_name || this.defaultClient);
   }
 
   getPersistence() {

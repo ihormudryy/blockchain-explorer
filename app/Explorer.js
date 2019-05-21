@@ -16,8 +16,6 @@ const ExplorerError = require('./common/ExplorerError');
 const dbroutes = require('./rest/dbroutes');
 const platformroutes = require('./rest/platformroutes');
 
-const swaggerDocument = require('../swagger.json');
-
 const explorer_const = require('./common/ExplorerConst').explorer.const;
 const explorer_error = require('./common/ExplorerMessage').explorer.error;
 
@@ -26,11 +24,6 @@ class Explorer {
     this.app = express();
     this.app.use(bodyParser.json());
     this.app.use(bodyParser.urlencoded({ extended: true }));
-    // this.app.use(
-    //   '/api-docs',
-    //   swaggerUi.serve,
-    //   swaggerUi.setup(swaggerDocument)
-    // );
     this.app.use(fileUpload());
     this.app.use(compression());
     this.persistence;
@@ -43,9 +36,11 @@ class Explorer {
 
   async initAPI(platform) {
     return new Promise((resolve, reject) => {
+      console.log('init', platform.networks);
+      debugger;
       const config = {
         appRoot: __dirname,
-        swaggerFile: 'app/swagger.json',
+        swaggerFile: 'app/api/swagger/swagger.json',
         dependencies: platform,
         controllersDirs: ['rest']
       };
@@ -98,15 +93,15 @@ class Explorer {
       this.persistence,
       broadcaster
     );
-
+    console.log('PlatformBuilder build');
     platform.setPersistenceService();
     // // initializing the platfrom
     await platform.initialize();
     //TODO: after platform has initialized use platform abject as dependency in swagger config
     await this.initAPI(platform);
     // initializing the rest app services
-    await dbroutes(this.app, platform);
-    await platformroutes(this.app, platform);
+    // await dbroutes(this.app, platform);
+    // await platformroutes(this.app, platform);
 
     // initializing sync listener
     platform.initializeListener(explorerconfig.sync);
