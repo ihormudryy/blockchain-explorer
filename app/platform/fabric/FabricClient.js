@@ -3,27 +3,26 @@
 */
 
 const Fabric_Client = require('fabric-client');
+const BlockDecoder = require('fabric-client/lib/BlockDecoder');
+const User = require('fabric-client/lib/User.js');
+const client_utils = require('fabric-client/lib/client-utils.js');
+const path = require('path');
+const Constants = require('fabric-client/lib/Constants.js');
+const grpc = require('grpc');
+
 const helper = require('../../common/helper');
 
 const logger = helper.getLogger('FabricClient');
 const ExplorerError = require('../../common/ExplorerError');
-const BlockDecoder = require('fabric-client/lib/BlockDecoder');
 const AdminPeer = require('./AdminPeer');
-const grpc = require('grpc');
-const User = require('fabric-client/lib/User.js');
-const client_utils = require('fabric-client/lib/client-utils.js');
 const channelService = require('./service/channelService.js');
 const FabricUtils = require('./utils/FabricUtils.js');
-const explorer_config = require('../../explorerconfig.json');
-const explorer_const = require('../../common/ExplorerConst.js').explorer.const;
-const path = require('path');
 
 const _commonProto = grpc.load(
   `${__dirname}/../../../node_modules/fabric-client/lib/protos/common/common.proto`
 ).common;
-const Constants = require('fabric-client/lib/Constants.js');
 
-const ROLES = Constants.NetworkConfig.ROLES;
+const { ROLES } = Constants.NetworkConfig;
 
 const explorer_mess = require('../../common/ExplorerMessage').explorer;
 
@@ -35,12 +34,12 @@ class FabricClient {
     this.defaultChannel = {};
     this.defaultOrderer = null;
     this.channelsGenHash = new Map();
-    this.client_config;
+    this.client_config = null;
     this.adminpeers = new Map();
     this.adminusers = new Map();
     this.peerroles = {};
     this.status = false;
-    this.ordererOrg;
+    this.ordererOrg = null;
     for (const role of ROLES) {
       this.peerroles[role] = role;
     }
@@ -67,7 +66,7 @@ class FabricClient {
     logger.debug(
       'Loading client  [%s] from configuration ...',
       this.client_name,
-      client_config['organizations']
+      client_config.organizations
     );
     await this.LoadClientFromConfig(client_config);
     logger.debug(
@@ -79,10 +78,10 @@ class FabricClient {
     await this.defaultChannel.initialize({
       discover: true,
       target: this.defaultPeer,
-      asLocalhost: asLocalhost
+      asLocalhost
     });
 
-    let organization = client_config.client.organization;
+    const { organization } = client_config.client;
     logger.debug(
       client_config.organizations[organization].certificateAuthorities
     );
@@ -118,23 +117,12 @@ class FabricClient {
         logger.debug('Initialized channel >> %s', channel.channel_id);
       }
 
-      try {
-        // load default channel network details from discovery
-        const result = await this.defaultChannel.getDiscoveryResults();
-      } catch (e) {
-        logger.debug('Channel Discovery >>  %s', e);
-        throw new ExplorerError(
-          explorer_mess.error.ERROR_2001,
-          this.defaultChannel.getName(),
-          this.client_name
-        );
-      }
       // setting default orderer
       const channel_name = client_config.client.channel;
       const channel = await this.hfc_client.getChannel(channel_name);
       const temp_orderers = await channel.getOrderers();
       if (temp_orderers && temp_orderers.length > 0) {
-        this.defaultOrderer = temp_orderers[0];
+        [this.defaultOrderer] = temp_orderers;
       } else {
         throw new ExplorerError(explorer_mess.error.ERROR_2002);
       }
@@ -171,7 +159,7 @@ class FabricClient {
       client_config.channels[default_channel_name].peers
     )[0];
 
-    if (channels.length == 0) {
+    if (channels.length === 0) {
       throw new ExplorerError(explorer_mess.error.ERROR_2003);
     }
 
@@ -185,7 +173,9 @@ class FabricClient {
       let newchannel;
       try {
         newchannel = this.hfc_client.getChannel(channel.channelname);
-      } catch (e) {}
+      } catch (e) {
+        logger.error(e);
+      }
       if (newchannel === undefined) {
         newchannel = this.hfc_client.newChannel(channel.channelname);
       }
@@ -196,11 +186,7 @@ class FabricClient {
         try {
           if (peer_config && peer_config.tlsCACerts) {
             pem = FabricUtils.getPEMfromConfig(peer_config.tlsCACerts);
-            const msps = {
-              [node.mspid]: {
-                tls_root_certs: pem
-              }
-            };
+            const msps = { [node.mspid]: { tls_root_certs: pem } };
             const adminpeer = await this.newAdminPeer(
               newchannel,
               node.requests,
@@ -223,7 +209,9 @@ class FabricClient {
               }
             }
           }
-        } catch (e) {}
+        } catch (e) {
+          logger.error(e);
+        }
       }
       try {
         newchannel.getPeer(default_peer_name);
@@ -252,16 +240,16 @@ class FabricClient {
 
   async getRegisteredUser(client_config) {
     try {
-      var username = Fabric_Client.getConfigSetting(
+      const username = Fabric_Client.getConfigSetting(
         'enroll-id',
         'dflt_hlbeuser'
       );
-      var userOrg = client_config.client.organization;
-      var client = await this.LoadClientFromConfig(client_config);
+      const userOrg = client_config.client.organization;
+      await this.LoadClientFromConfig(client_config);
       logger.debug('Successfully initialized the credential stores');
       // client can now act as an agent for the specified organization
       // first check to see if the user is already enrolled
-      var user = await this.hfc_client.getUserContext(username, true);
+      let user = await this.hfc_client.getUserContext(username, true);
       if (user && user.isEnrolled()) {
         logger.info(
           'Successfully loaded member from persistence [%s]',
@@ -274,12 +262,12 @@ class FabricClient {
           username
         );
 
-        let adminUserObj = await this.hfc_client.setUserContext({
+        const adminUserObj = await this.hfc_client.setUserContext({
           username: Fabric_Client.getConfigSetting('admin-username', 'admin'),
           password: Fabric_Client.getConfigSetting('admin-secret', 'adminpw')
         });
-        let caClient = this.hfc_client.getCertificateAuthority();
-        let secret = await caClient.register(
+        const caClient = this.hfc_client.getCertificateAuthority();
+        const secret = await caClient.register(
           {
             enrollmentID: username,
             affiliation:
@@ -290,7 +278,7 @@ class FabricClient {
         );
         logger.debug('Successfully got the secret for user %s', username);
         user = await this.hfc_client.setUserContext({
-          username: username,
+          username,
           password: secret
         });
         logger.debug(
@@ -303,16 +291,14 @@ class FabricClient {
       }
     } catch (error) {
       logger.error(
-        'Failed to get registered user: %s with error: %s',
-        username,
+        'Failed to get registered user with error: %s',
         error.toString()
       );
-      return 'failed ' + error.toString();
+      return `failed ${error.toString()}`;
     }
   }
 
-  async LoadClientFromConfig(client_config, username) {
-    const _self = this;
+  async LoadClientFromConfig(client_config) {
     // load client through hfc client network configuration class
     await this.hfc_client.loadFromConfig(client_config);
     // initialize credential stores
@@ -362,7 +348,7 @@ class FabricClient {
       this.defaultChannel.getName()
     );
 
-    var peers = this.defaultChannel.getPeers();
+    const peers = this.defaultChannel.getPeers();
     this.defaultPeer = undefined;
     if (peers.length > 0) {
       for (const peer of peers) {
@@ -374,7 +360,7 @@ class FabricClient {
         }
       }
     }
-    if (peers.length == 0 || this.defaultPeer == undefined) {
+    if (peers.length === 0 || this.defaultPeer === undefined) {
       throw new ExplorerError(explorer_mess.error.ERROR_2006, this.client_name);
     }
     logger.debug(
@@ -460,7 +446,7 @@ class FabricClient {
       if (discover_results.orderers) {
         for (const msp_id in discover_results.orderers) {
           this.ordererOrg = msp_id;
-          const endpoints = discover_results.orderers[msp_id].endpoints;
+          const { endpoints } = discover_results.orderers[msp_id];
           for (const endpoint of endpoints) {
             let requesturl = endpoint.host;
             if (
@@ -678,7 +664,7 @@ class FabricClient {
     }
     if (!admin_key) {
       logger.debug(
-        'Client.createUser one of  cryptoContent privateKey, privateKeyPEM or privateKeyObj is required.'
+        'createUser one of cryptoContent privateKey, privateKeyPEM or privateKeyObj is required.'
       );
       return;
     }
@@ -699,7 +685,7 @@ class FabricClient {
     };
     let importedKey;
     const user = new User(opts.username);
-    const privateKeyPEM = opts.cryptoContent.privateKeyPEM;
+    const { privateKeyPEM, signedCertPEM } = opts.cryptoContent;
     if (privateKeyPEM) {
       logger.debug('then privateKeyPEM data');
       importedKey = await this.hfc_client
@@ -708,7 +694,6 @@ class FabricClient {
           ephemeral: !this.hfc_client.getCryptoSuite()._cryptoKeyStore
         });
     }
-    const signedCertPEM = opts.cryptoContent.signedCertPEM;
     user.setCryptoSuite(this.hfc_client.getCryptoSuite());
     await user.setEnrollment(importedKey, signedCertPEM.toString(), opts.mspid);
     return user;

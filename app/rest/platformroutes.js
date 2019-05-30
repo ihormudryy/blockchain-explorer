@@ -3,13 +3,14 @@
  *    SPDX-License-Identifier: Apache-2.0
  */
 
+/* eslint-disable no-restricted-globals */
+
 const requtil = require('./requestutils');
 const helper = require('../common/helper');
 
 const platformroutes = async function(app, platform) {
   const proxy = platform.getProxy();
   const statusMetrics = platform.getPersistence().getMetricService();
-  const crudService = platform.getPersistence().getCrudService();
   const logger = helper.getLogger('PlatformRoutes');
 
   /** *
@@ -20,7 +21,7 @@ const platformroutes = async function(app, platform) {
     */
   app.get('/api/block/:channel_genesis_hash/:number', (req, res) => {
     const number = parseInt(req.params.number);
-    const channel_genesis_hash = req.params.channel_genesis_hash;
+    const { channel_genesis_hash } = req.params;
     if (!isNaN(number) && channel_genesis_hash) {
       proxy.getBlockByNumber(channel_genesis_hash, number).then(block => {
         res.send({
@@ -51,9 +52,7 @@ const platformroutes = async function(app, platform) {
     */
   app.get('/api/channels', (req, res) => {
     proxy.getChannels().then(channels => {
-      const response = {
-        status: 200
-      };
+      const response = { status: 200 };
       response.channels = channels;
       res.send(response);
     });
@@ -76,11 +75,9 @@ const platformroutes = async function(app, platform) {
     curl -i 'http://<host>:<port>/api/curChannel'
     */
   app.get('/api/changeChannel/:channel_genesis_hash', (req, res) => {
-    const channel_genesis_hash = req.params.channel_genesis_hash;
+    const { channel_genesis_hash } = req.params;
     proxy.changeChannel(channel_genesis_hash).then(data => {
-      res.send({
-        currentChannel: data
-      });
+      res.send({ currentChannel: data });
     });
   });
 
@@ -130,9 +127,7 @@ const platformroutes = async function(app, platform) {
     Response: {  success: true, message: 'Successfully joined peer to the channel '   }
     */
   app.post('/api/joinChannel', (req, res) => {
-    const channelName = req.body.channelName;
-    const peers = req.body.peers;
-    const orgName = req.body.orgName;
+    const { channelName, peers, orgName } = req.body.channelName;
     if (channelName && peers && orgName) {
       proxy
         .joinChannel(channelName, peers, orgName)
@@ -190,7 +185,10 @@ const platformroutes = async function(app, platform) {
     const channelName = req.params.channel;
     if (channelName) {
       proxy.getPeersStatus(channelName).then(data => {
-        res.send({ status: 200, peers: data });
+        res.send({
+          status: 200,
+          peers: data
+        });
       });
     } else {
       return requtil.invalidRequest(req, res);
@@ -269,7 +267,7 @@ const platformroutes = async function(app, platform) {
     );
 
     if (peers && channel && name && version) {
-      let message = await proxy.instantiateChaincode(
+      const message = await proxy.instantiateChaincode(
         {
           peers,
           name,

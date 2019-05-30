@@ -14,11 +14,8 @@
  limitations under the License.
 */
 
-const api = require('fabric-client/lib/api.js');
 const utils = require('fabric-client/lib/utils.js');
-const Remote = require('fabric-client/lib/Remote');
 const grpc = require('grpc');
-const util = require('util');
 const appRoot = require('app-root-path');
 
 const _serviceProto = grpc.load(
@@ -185,7 +182,8 @@ class AdminPeer {
         if (self._peer._options['grpc.default_authority']) {
           server_hostname = self._peer._options['grpc.default_authority'];
         } else {
-          server_hostname = self._peer._options['grpc.ssl_target_name_override'];
+          server_hostname =
+            self._peer._options['grpc.ssl_target_name_override'];
         }
         if (err) {
           logger.debug(
@@ -194,9 +192,15 @@ class AdminPeer {
             err
           );
           if (err instanceof Error) {
-            resolve({ status: 'DOWN', server_hostname });
+            resolve({
+              status: 'DOWN',
+              server_hostname
+            });
           } else {
-            resolve({ status: 'DOWN', server_hostname });
+            resolve({
+              status: 'DOWN',
+              server_hostname
+            });
           }
         } else {
           logger.debug(
@@ -204,7 +208,10 @@ class AdminPeer {
             self._peer._url,
             serverStatus
           );
-          resolve({ status: 'RUNNING', server_hostname });
+          resolve({
+            status: 'RUNNING',
+            server_hostname
+          });
         }
       });
     });
@@ -214,7 +221,7 @@ class AdminPeer {
    * return a printable representation of this object
    */
   toString() {
-    return `${' Admin : {' + 'url:'}${this._url}}`;
+    return `Admin : { url:${this._url}}`;
   }
 }
 
