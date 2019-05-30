@@ -314,6 +314,17 @@ class Proxy {
     );
   }
 
+  async queryChaincode(channelName, targets, ccId, fcn, args) {
+    return chaincodeService.queryChaincode(
+      channelName,
+      targets,
+      ccId,
+      fcn,
+      args,
+      this.platform
+    );
+  }
+
   generateDockerArtifacts(orgOptions, randomNumber) {
     const networkOptions = {
       commonDir: 'private',

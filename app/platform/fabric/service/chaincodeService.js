@@ -337,8 +337,44 @@ async function invokeChaincode(
   }
 }
 
-// getPath();
+async function queryChaincode(
+  channelName,
+  targets,
+  ccId,
+  fcn,
+  args,
+  platform
+) {
+  const client = platform.getClient().hfc_client;
+  try {
+    const channel = client.getChannel(channelName);
+    if (!channel) {
+      const message = 'Channel %s was not defined in the connection profile';
+      logger.error(message);
+      throw new Error(message);
+    }
+    const txId = client.newTransactionID(true);
+    // send proposal to endorser
+    const request = {
+      txId,
+      targets,
+      chaincodeId: ccId,
+      fcn,
+      args
+    };
+
+    return channel.queryByChaincode(request);
+  } catch (error) {
+    logger.error(
+      'Failed to query due to error: ',
+      error.stack ? error.stack : error
+    );
+    throw error;
+  }
+}
+
 exports.installChaincode = installChaincode;
 exports.instantiateChaincode = instantiateChaincode;
 exports.loadChaincodeSrc = loadChaincodeSrc;
 exports.invokeChaincode = invokeChaincode;
+exports.queryChaincode = queryChaincode;

@@ -17,7 +17,7 @@ services:
       - DATABASE_PASSWORD=password
       - GOPATH=/opt/explorer/tmp
       - DISCOVERY_AS_LOCALHOST=false
-      - LOG_LEVEL=INFO
+      - LOG_LEVEL=DEBUG
       - NODE_ENV=development
     volumes:
       - /var/lib/docker/volumes/net_private/_data:/private
@@ -26,6 +26,7 @@ services:
       - ./logs:/opt/explorer/logs
       - ./start.sh:/opt/explorer/start.sh
       - ./swagger.json:/opt/explorer/swagger.json
+      - ./package.json:/opt/explorer/package.json
     ports:
       - 8888:8080
       - 9229:9229
