@@ -38,7 +38,7 @@ describe('Test explorerpg.sql for DDL statements syntax verification', () => {
     const readline = require('readline');
 
     const instream = fs.createReadStream(
-      './app/persistence/fabric/postgreSQL/db/explorerpg.sql'
+      '../persistence/fabric/postgreSQL/db/explorerpg.sql'
     );
 
     const outstream = new (require('stream'))();
@@ -88,7 +88,7 @@ describe('Test explorerpg.sql for DDL statements syntax verification', () => {
     rl.on('close', line => {});
     readdone();
   });
-  it.skip('should execute statements successfully in  explorerpg.sql file ', function(testdone) {
+  it('should execute statements successfully in  explorerpg.sql file ', function(testdone) {
     this.timeout(7000);
     options.tests = [];
     const newList = new ArrayList();

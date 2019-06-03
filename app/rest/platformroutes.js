@@ -372,6 +372,27 @@ const platformroutes = async function(app, platform) {
       return requtil.invalidRequest(req, res);
     }
   });
+
+  /** *
+   Query chaincode
+   GET /api/chaincode/:chaincode/query
+   curl -i 'http://<host>:<port>/api/chaincode/:chaincode/query'
+   */
+  app.get('/api/chaincode/:chaincode/query', async (req, res) => {
+    try {
+      let { args } = req.query;
+      const { channelName, targets, fcn } = req.query;
+      const { chaincode } = req.params;
+      if (!Array.isArray(args)) {
+        args = [args];
+      }
+      const result = await proxy.queryChaincode(channelName, targets, chaincode, fcn, args);
+      res.send(result.map(val => val.toString()));
+    } catch (err) {
+      console.log(err);
+      return requtil.invalidRequest(req, res);
+    }
+  });
 };
 
 module.exports = platformroutes;

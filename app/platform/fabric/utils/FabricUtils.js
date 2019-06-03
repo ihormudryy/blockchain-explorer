@@ -474,7 +474,7 @@ const generateConfig = (org, channel, orderer, peers) => ({
       signedCert: { path: `/private/orgs/${org}/admin/msp/signcerts` }
     }
   },
-  peers: new Array(peers).fill(0).reduce((acc, val, key) => {
+  peers: [...Array(peers).keys()].reduce((acc, val, key) => {
     const peerName = `peer${key + 1}.${org}.com`;
     return {
       ...acc,

@@ -509,7 +509,8 @@ class FabricClient {
       return;
     }
 
-    if (!this.adminpeers.get(url)) {
+    const adminPeer = this.adminpeers.get(url);
+    if (!adminPeer) {
       let newpeer = this.newPeer(channel, url, msp_id, host, msps, host);
       if (
         newpeer &&
@@ -526,6 +527,13 @@ class FabricClient {
       );
       this.adminpeers.set(url, adminpeer);
       return adminpeer;
+    } else {
+      try {
+        // if peer assigned to channel, skip
+        channel.getChannelPeer(adminPeer._peer.getName());
+      } catch(err) {
+        channel.addPeer(adminPeer._peer, msp_id);
+      }
     }
   }
 
@@ -781,6 +789,7 @@ class FabricClient {
     ] of this.channelsGenHash.entries()) {
       if (new_channel_genesis_hash === channel_genesis_hash) {
         this.defaultChannel = this.hfc_client.getChannel(channel_name);
+        console.log('this.defaultChannel', this.defaultChannel);
         return channel_genesis_hash;
       }
     }
