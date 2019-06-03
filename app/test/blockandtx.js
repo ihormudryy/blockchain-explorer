@@ -4,7 +4,7 @@ const chai = require('chai');
 
 const should = chai.should();
 const { spy, stub } = require('sinon');
-const config = require('../../app/platform/fabric/config');
+const config = require('../../app/platform/fabric/config.json');
 const appconfig = require('../../appconfig.json');
 
 const host = process.env.HOST || appconfig.host;
@@ -32,6 +32,7 @@ describe('GET /api/blockAndTxList/:channel/:blocknum', () => {
   it('should return blockandtx ', done => {
     const obj = blockandtx;
     this.get.yields(null, JSON.stringify(obj));
+    console.log(config.channel);
     request.get(
       `${`${base}` + '/api/blockAndTxList/'}${config.channel}/0`,
       (err, body) => {
