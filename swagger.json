@@ -31,6 +31,51 @@
     }
   ],
   "paths": {
+    "/api/chaincode/{chaincode}/query": {
+      "x-swagger-router-controller": "platformroutes",
+      "get": {
+        "summary": "Query chaincode",
+        "description": "Query chaincode",
+        "parameters": [
+          {
+            "name": "chaincode",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "fcn",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "args",
+            "in": "query",
+            "required": true,
+            "type": "array"
+          },
+          {
+            "name": "channelName",
+            "in": "query",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "produces": ["application/json"],
+        "responses": {
+          "200": {
+            "description": "Success"
+          },
+          "default": {
+            "description": "Unexpected error",
+            "schema": {
+              "$ref": "#/definitions/Error"
+            }
+          }
+        }
+      }
+    },
     "/api/chaincode/{chaincode}/invoke": {
       "x-swagger-router-controller": "platformroutes",
       "post": {

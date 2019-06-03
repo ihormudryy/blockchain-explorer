@@ -376,7 +376,7 @@ const platformroutes = async function(app, platform) {
   /** *
    Query chaincode
    GET /api/chaincode/:chaincode/query
-   curl -i 'http://<host>:<port>/api/chaincode/:chaincode/invoke'
+   curl -i 'http://<host>:<port>/api/chaincode/:chaincode/query'
    */
   app.get('/api/chaincode/:chaincode/query', async (req, res) => {
     try {
