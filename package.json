@@ -46,7 +46,7 @@
     "swagger-ui-express": "^3.0.9",
     "utf8-bytes": "0.0.1",
     "winston": "^2.2.0",
-    "ws": "^5.1.1"
+    "ws": "^7.4.6"
   },
   "license": "Apache-2.0",
   "devDependencies": {
